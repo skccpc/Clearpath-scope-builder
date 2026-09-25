@@ -9,10 +9,9 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], de
 
   // Allowances are a fixed checkbox list: { id, label, amount, included }.
   // Scopes saved by an earlier version of the app have no `included` field at
-  // all, so "missing" has to read as included — only an explicit false pulls an
-  // allowance out of the covered list and into the excluded sentence.
+  // all, so "missing" has to read as included — only an explicit false keeps an
+  // allowance off the document entirely.
   const includedAllowances = allowances.filter(a => a.included !== false);
-  const excludedAllowances = allowances.filter(a => a.included === false);
 
   // Price and schedule are derived rather than typed. One price is entered and
   // printed only as a ±10% band; the four schedule dates come from today plus
@@ -132,25 +131,17 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], de
       ),
 
       // Allowances — deliberately outside the Inclusions guard above. The
-      // allowance figures and the excluded list are contractual either way, so
-      // they still have to print on a scope where no line item happens to be
-      // checked.
-      (includedAllowances.length > 0 || excludedAllowances.length > 0) && React.createElement('div', { style:{ marginTop:20 } },
-        includedAllowances.length > 0 && React.createElement('div', {},
-          React.createElement(SubTitle, { text:'Included Allowances' }),
-          includedAllowances.map((a, i) =>
-            // Keyed on id where present: filtering shifts array indices, so the
-            // index alone is not a stable identity across renders.
-            React.createElement(AllowanceBox, { key:a.id || i, amount:a.amount, label:a.label, desc:a.desc || '' })
-          )
-        ),
-        // Named explicitly rather than left silent, so an unchecked allowance
-        // cannot later be read as an oversight.
-        excludedAllowances.length > 0 && React.createElement('div', {},
-          React.createElement(SubTitle, { text:'Excluded from Allowances' }),
-          React.createElement(Bullet, {
-            text:`The following carry no allowance and are excluded from this scope: ${excludedAllowances.map(a => a.label).join(', ')}.`
-          })
+      // allowance figures are contractual either way, so they still have to
+      // print on a scope where no line item happens to be checked.
+      //
+      // An unchecked allowance simply doesn't print: it is not listed anywhere
+      // on the document.
+      includedAllowances.length > 0 && React.createElement('div', { style:{ marginTop:20 } },
+        React.createElement(SubTitle, { text:'Included Allowances' }),
+        includedAllowances.map((a, i) =>
+          // Keyed on id where present: filtering shifts array indices, so the
+          // index alone is not a stable identity across renders.
+          React.createElement(AllowanceBox, { key:a.id || i, amount:a.amount, label:a.label, desc:a.desc || '' })
         )
       ),
 

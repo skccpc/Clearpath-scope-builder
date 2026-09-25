@@ -795,9 +795,9 @@ function AddOnsPanel({ addOns, onChange }) {
 //
 // Checked   → included in the scope and printed under "Included Allowances"
 //             with its dollar amount.
-// Unchecked → printed under "Excluded from Allowances". This is the point of a
-//             fixed list: an allowance the client doesn't get is stated as
-//             excluded rather than silently missing from the page.
+// Unchecked → left off the scope document entirely. The fixed list keeps the
+//             checklist consistent in the editor; it does not print anything
+//             for the allowances that weren't selected.
 //
 // Amounts start from the defaults (admin-set in the Master Template screen, or
 // the hardcoded fallback) and are editable per project.

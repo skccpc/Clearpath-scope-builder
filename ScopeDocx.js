@@ -232,9 +232,9 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
   // `included !== false` rather than `included === true` — scopes saved by an
   // earlier version of the app have no `included` field at all, and those
   // entries were all included by definition. Only an explicit `false` (the
-  // user unchecking the box) excludes.
+  // user unchecking the box) excludes, and an excluded allowance is simply left
+  // off the document rather than being listed anywhere.
   const includedAllowances = allowances.filter(a => a.included !== false);
-  const excludedAllowances = allowances.filter(a => a.included === false);
 
   if (includedAllowances.length > 0) {
     sectionsContent.push(subheading('Included Allowances'));
@@ -253,13 +253,6 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
       ]));
       sectionsContent.push(new Paragraph({ spacing: { after: 80 }, children: [] }));
     });
-  }
-
-  // Unchecked allowances are called out by name — silence would read as "not
-  // priced yet" rather than "not in this scope".
-  if (excludedAllowances.length > 0) {
-    sectionsContent.push(subheading('Excluded from Allowances'));
-    sectionsContent.push(bullet(`The following carry no allowance and are excluded from this scope: ${excludedAllowances.map(a => a.label).join(', ')}.`));
   }
 
   // ── Exclusions ───────────────────────────────────────────────────────────
