@@ -231,25 +231,6 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], de
             )
           )
         ),
-        // Effective weeks, not the weeks that were entered — a holiday inside a
-        // phase adds one, and the printed dates already reflect that.
-        React.createElement('div', {
-          style:{ fontFamily:"'Figtree', sans-serif", fontSize:11, color:goldDark }
-        }, `Design ${sched.designWeeksEffective} weeks · Construction ${sched.constructionWeeksEffective} weeks · Total ${sched.totalWeeksEffective} weeks`),
-        // Says why a phase runs longer than expected. De-duplicated via a Set:
-        // a holiday can land in both phases and would otherwise be named twice.
-        (sched.designHolidays.length > 0 || sched.constructionHolidays.length > 0) && React.createElement('div', {
-          style:{ fontFamily:"'Figtree', sans-serif", fontSize:10, fontStyle:'italic', color:goldDark, marginTop:4 }
-        }, `Includes one additional week for ${window.cpJoinNames([...new Set([...sched.designHolidays, ...sched.constructionHolidays])])}.`),
-        // A derived start is relative to the day this document was generated, so
-        // say so — a client comparing two printings should not read a shifted
-        // date as a slipped schedule. A start picked by hand is fixed, so the
-        // caveat would be untrue and the sentence drops it.
-        React.createElement('div', {
-          style:{ fontFamily:"'Figtree', sans-serif", fontSize:10, fontStyle:'italic', color:goldDark, marginTop:4 }
-        }, sched.designStartPinned
-             ? `Dates are calculated from a design start of ${window.cpFormatDate(sched.designStart)}.`
-             : `Dates are calculated from ${window.cpFormatDate(sched.designStart)}. Regenerating this scope on a later date will shift the schedule.`),
         info.scheduleNotes && React.createElement('p', {
           style:{ fontFamily:"'Figtree', sans-serif", fontWeight:300, fontSize:11, lineHeight:1.7, color:slate, whiteSpace:'pre-wrap', marginTop:6 }
         }, info.scheduleNotes),

@@ -415,33 +415,6 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
       ['Construction Complete', window.cpFormatDate(sched.constructionComplete)],
     ));
 
-    // Effective weeks — holiday extensions included, so these can exceed the
-    // durations that were entered.
-    sectionsContent.push(p(
-      `Design ${sched.designWeeksEffective} weeks · Construction ${sched.constructionWeeksEffective} weeks · Total ${sched.totalWeeksEffective} weeks`,
-      { before: 200 },
-    ));
-
-    // A holiday landing in both phases would otherwise be named twice.
-    const holidays = [...new Set([...sched.designHolidays, ...sched.constructionHolidays])];
-    if (holidays.length) {
-      sectionsContent.push(p(
-        `Includes one additional week for ${window.cpJoinNames(holidays)}.`,
-        { italics: true, color: '666666' },
-      ));
-    }
-
-    // A derived start is computed from today, so a scope re-exported next month
-    // reads differently. Say so rather than let the client assume the dates
-    // were committed to. A start picked by hand doesn't move, so it drops the
-    // caveat instead of printing something untrue.
-    sectionsContent.push(p(
-      sched.designStartPinned
-        ? `Dates are calculated from a design start of ${window.cpFormatDate(sched.designStart)}.`
-        : `Dates are calculated from ${window.cpFormatDate(sched.designStart)}. Regenerating this scope on a later date will shift the schedule.`,
-      { italics: true, color: '666666' },
-    ));
-
     if (info.scheduleNotes) {
       sectionsContent.push(p(info.scheduleNotes, { before: 200 }));
     }
