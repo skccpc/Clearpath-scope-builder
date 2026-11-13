@@ -68,7 +68,7 @@ function money(val) {
   return String(normalized).replace(/\$\s*/g, '$ ');
 }
 
-async function generateScopeDocx({ info, sections, exclusions, allowances, addOns = [], designDrawings = [] }) {
+async function generateScopeDocx({ info, sections, exclusions, allowances, addOns = [], requiredItems = [], designDrawings = [] }) {
   const D = await loadDocxLib();
   const {
     Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
@@ -302,30 +302,44 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
     ], C_SLATE, C_BG_LIGHT));
   }
 
+  // Title + price box with an optional description, used by both the
+  // Required-Not-Included items and the Optional Add-Ons.
+  const pricedBox = (a, fallback, accent) => {
+    sectionsContent.push(shadedBox([
+      new Paragraph({
+        spacing: { after: a.desc ? 100 : 0 },
+        // Right tab set to the box's usable inner width (~8800 twips) rather
+        // than TabStopPosition.MAX — MAX overflows the shaded cell and makes
+        // the price collapse against the title.
+        tabStops: [{ type: TabStopType.RIGHT, position: 8800 }],
+        children: [
+          new TextRun({ text: a.title || fallback, font: FONT_HEAD, size: 32, color: C_SLATE }),
+          ...(a.amount ? [new TextRun({ text: '\t' + money(a.amount), font: FONT_HEAD, size: 32, color: C_MAGNOLIA })] : []),
+        ],
+      }),
+      ...(a.desc ? [new Paragraph({
+        children: [new TextRun({ text: a.desc, font: FONT_BODY, size: 22, color: '333333' })],
+      })] : []),
+    ], accent, C_BG_LIGHT));
+    sectionsContent.push(new Paragraph({ spacing: { after: 80 }, children: [] }));
+  };
+
+  // ── Required — Not Included ──────────────────────────────────────────────
+  // Work the project needs but that is priced separately from the total, so
+  // it goes straight after the estimate with a line saying so.
+  const realRequired = (requiredItems || []).filter(a => a.title || a.amount || a.desc);
+  if (realRequired.length > 0) {
+    sectionsContent.push(sectionHeading('Required — Not Included'));
+    sectionsContent.push(p('Required for this project but not included in the estimated total above. Prices are estimates and will be finalized during design.', { italics: true, color: '666666', after: 160 }));
+    realRequired.forEach(a => pricedBox(a, 'Required Item', C_MAGNOLIA));
+  }
+
   // ── Optional Add-Ons ─────────────────────────────────────────────────────
   const realAddOns = (addOns || []).filter(a => a.title || a.amount || a.desc);
   if (realAddOns.length > 0) {
     sectionsContent.push(sectionHeading('Optional Add-Ons'));
     sectionsContent.push(p('Additional scope items available outside the preliminary estimate above. Pricing reflects current market estimates and is finalized at contract.', { italics: true, color: '666666', after: 160 }));
-    realAddOns.forEach(a => {
-      sectionsContent.push(shadedBox([
-        new Paragraph({
-          spacing: { after: a.desc ? 100 : 0 },
-          // Right tab set to the box's usable inner width (~8800 twips) rather
-          // than TabStopPosition.MAX — MAX overflows the shaded cell and makes
-          // the price collapse against the title.
-          tabStops: [{ type: TabStopType.RIGHT, position: 8800 }],
-          children: [
-            new TextRun({ text: a.title || 'Add-On', font: FONT_HEAD, size: 32, color: C_SLATE }),
-            ...(a.amount ? [new TextRun({ text: '\t' + money(a.amount), font: FONT_HEAD, size: 32, color: C_MAGNOLIA })] : []),
-          ],
-        }),
-        ...(a.desc ? [new Paragraph({
-          children: [new TextRun({ text: a.desc, font: FONT_BODY, size: 22, color: '333333' })],
-        })] : []),
-      ], C_LIMESTONE, C_BG_LIGHT));
-      sectionsContent.push(new Paragraph({ spacing: { after: 80 }, children: [] }));
-    });
+    realAddOns.forEach(a => pricedBox(a, 'Add-On', C_LIMESTONE));
   }
 
   // ── Schedule ─────────────────────────────────────────────────────────────

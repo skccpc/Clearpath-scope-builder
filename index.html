@@ -250,7 +250,7 @@ function applyTemplate(prevSections, libraryData, projectType) {
 // Templates screens in app.jsx as well as by App itself.
 //
 // A snapshot holds the scope: the sections with their check marks, the
-// exclusions, the allowances, the add-ons, and the scope-shaped parts of info
+// exclusions, the allowances, the add-ons and required items, and the scope-shaped parts of info
 // (project type and the two durations). It deliberately does NOT hold the
 // client, address, prepared date, description, price or deposit — those belong
 // to a project. Uploaded design drawings are left out too: they're photos of
@@ -271,6 +271,7 @@ function scopeFromState(state) {
     exclusions: state?.exclusions || [],
     allowances: state?.allowances || [],
     addOns:     state?.addOns     || [],
+    requiredItems: state?.requiredItems || [],
   };
 }
 
@@ -285,6 +286,7 @@ function stateFromScope(scope, extraInfo) {
     exclusions: copy.exclusions || [],
     allowances: copy.allowances || [],
     addOns:     copy.addOns     || [],
+    requiredItems: copy.requiredItems || [],
   };
 }
 
@@ -298,6 +300,7 @@ function masterScope(libraryData) {
     exclusions: initExclusions(libraryData),
     allowances: initAllowances(libraryData),
     addOns:     [],
+    requiredItems: [],
   };
 }
 
@@ -433,14 +436,15 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
   const [exclusions, setExclusions] = React.useState(initialState?.exclusions || initExclusions(libraryData));
   const [allowances, setAllowances] = React.useState(() => mergeAllowances(initialState?.allowances, libraryData));
   const [addOns, setAddOns] = React.useState(initialState?.addOns || []);
+  const [requiredItems, setRequiredItems] = React.useState(initialState?.requiredItems || []);
   const [designDrawings, setDesignDrawings] = React.useState(initialState?.designDrawings || []);
   const [sideTab, setSideTab] = React.useState('sections');
   const [searchQ, setSearchQ] = React.useState('');
 
   // Notify parent of changes (auto-save handled by ProjectEditor)
   React.useEffect(() => {
-    if (onChange) onChange({ info, sections, exclusions, allowances, addOns, designDrawings });
-  }, [info, sections, exclusions, allowances, addOns, designDrawings]);
+    if (onChange) onChange({ info, sections, exclusions, allowances, addOns, requiredItems, designDrawings });
+  }, [info, sections, exclusions, allowances, addOns, requiredItems, designDrawings]);
 
   // Render print frame when previewing
   React.useEffect(() => {
@@ -635,7 +639,7 @@ ${fontStyles}
       key: 'docx',
       onClick: async () => {
         try {
-          await window.generateScopeDocx({ info, sections, exclusions, allowances, addOns, designDrawings });
+          await window.generateScopeDocx({ info, sections, exclusions, allowances, addOns, requiredItems, designDrawings });
         } catch (err) {
           console.error(err);
           alert('Could not generate .docx — check console for details.');
@@ -648,13 +652,13 @@ ${fontStyles}
     // one-time copy — later edits to either side don't cross over.
     !templateMode && onSaveAsTemplate && React.createElement('button', {
       key: 'saveTmpl',
-      onClick: () => onSaveAsTemplate(scopeFromState({ info, sections, exclusions, allowances, addOns })),
+      onClick: () => onSaveAsTemplate(scopeFromState({ info, sections, exclusions, allowances, addOns, requiredItems })),
       title: 'Save this scope as a reusable template',
       style:{ fontFamily:"'Figtree',sans-serif", fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', fontWeight:400, background:'transparent', color:'#EFECE8', border:'1px solid rgba(239,236,232,0.4)', padding:'6px 14px', cursor:'pointer' }
     }, 'Save as Template'),
     React.createElement('button', {
       key: 'reset',
-      onClick: () => { if (confirm('Reset everything to a blank scope?')) { setSections(initSections(libraryData, '')); setExclusions(initExclusions(libraryData)); setInfo(DEFAULT_INFO); setAllowances(initAllowances(libraryData)); setAddOns([]); } },
+      onClick: () => { if (confirm('Reset everything to a blank scope?')) { setSections(initSections(libraryData, '')); setExclusions(initExclusions(libraryData)); setInfo(DEFAULT_INFO); setAllowances(initAllowances(libraryData)); setAddOns([]); setRequiredItems([]); } },
       style:{ fontFamily:"'Figtree',sans-serif", fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', fontWeight:400, background:'none', color:'rgba(239,236,232,0.4)', border:'1px solid rgba(239,236,232,0.2)', padding:'6px 12px', cursor:'pointer' }
     }, 'Reset')
   );
@@ -691,6 +695,7 @@ ${fontStyles}
             // uploaded plans. None of it belongs to a reusable template.
             !templateMode && React.createElement(ProjectInfo, { key:'info', info, onChange: setInfo, onChangeType: changeProjectType }),
             React.createElement(AllowancesPanel, { key:'allow', allowances, onChange: setAllowances }),
+            React.createElement(RequiredItemsPanel, { key:'required', requiredItems, onChange: setRequiredItems }),
             React.createElement(AddOnsPanel, { key:'addons', addOns, onChange: setAddOns }),
             !templateMode && React.createElement(DesignDrawingsPanel, { key:'draw', drawings: designDrawings, onChange: setDesignDrawings })
           )
@@ -832,7 +837,7 @@ ${fontStyles}
     style:{ flex:1, overflow:'auto', background:'#ccc9c4', padding:'32px' }
   },
     React.createElement('div', { style:{ maxWidth:816, margin:'0 auto', background:'white', boxShadow:'0 4px 32px rgba(0,0,0,0.18)' } },
-      React.createElement(ScopeDocument, { info, sections, exclusions, allowances, addOns, designDrawings })
+      React.createElement(ScopeDocument, { info, sections, exclusions, allowances, addOns, requiredItems, designDrawings })
     )
   );
 

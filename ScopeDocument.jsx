@@ -1,7 +1,7 @@
 // ─── Document Preview Component ─────────────────────────────────────────────
 // Renders a branded, print-ready scope of work from the builder state
 
-function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], designDrawings = [] }) {
+function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], requiredItems = [], designDrawings = [] }) {
   const slate = '#3F4E5A', offwhite = '#EFECE8', magnolia = '#83443D', gold = '#C3BDB1', goldDark = '#a8a09a', border = '#ece8e3';
 
   const includedSections = sections.filter(s => s.items.some(i => i.included));
@@ -76,6 +76,30 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], de
       )
     );
   }
+
+  // Title + price box with an optional description. Shared by the
+  // Required-Not-Included items and the Optional Add-Ons; only the accent and
+  // the fallback title differ.
+  function PricedBox({ item, accent, fallback }) {
+    return React.createElement('div', {
+      style: { background:'#F5F2EF', borderLeft:`3px solid ${accent}`, padding:'18px 22px', marginBottom:12 }
+    },
+      React.createElement('div', { style:{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:20, marginBottom: item.desc ? 10 : 0 } },
+        React.createElement('div', {
+          style:{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontWeight:500, fontSize:20, color:slate, lineHeight:1.2 }
+        }, item.title || fallback),
+        item.amount && React.createElement('div', {
+          style:{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontWeight:500, fontSize:22, color:magnolia, whiteSpace:'nowrap' }
+        }, money(item.amount))
+      ),
+      item.desc && React.createElement('p', {
+        style:{ fontFamily:"'Figtree', sans-serif", fontWeight:300, fontSize:11, lineHeight:1.65, color:slate, whiteSpace:'pre-wrap' }
+      }, item.desc)
+    );
+  }
+
+  const realRequired = requiredItems.filter(a => a.title || a.amount || a.desc);
+  const realAddOns = addOns.filter(a => a.title || a.amount || a.desc);
 
   return React.createElement('div', { id:'scope-document', style:docStyle },
 
@@ -185,26 +209,21 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], de
         )
       ),
 
+      // Required — Not Included. Work the project needs (e.g. a utility
+      // hookup for a detached building) but that is priced on its own, so it
+      // sits right after the total with a line saying it isn't in it.
+      realRequired.length > 0 && React.createElement('div', {},
+        React.createElement(SecTitle, { text:'Required — Not Included' }),
+        React.createElement('div', {
+          style:{ fontFamily:"'Figtree', sans-serif", fontSize:10, fontStyle:'italic', color:goldDark, marginBottom:12 }
+        }, 'Required for this project but not included in the estimated total above. Prices are estimates and will be finalized during design.'),
+        realRequired.map((a, i) => React.createElement(PricedBox, { key:a.id || i, item:a, accent:magnolia, fallback:'Required Item' })),
+        React.createElement(Rule)
+      ),
+
       // Optional Add-Ons — boxes only, no header / description
-      addOns.length > 0 && addOns.some(a => a.title || a.amount || a.desc) && React.createElement('div', { style:{ marginTop: 12 } },
-        addOns.filter(a => a.title || a.amount || a.desc).map((a, i) =>
-          React.createElement('div', {
-            key: i,
-            style: { background:'#F5F2EF', borderLeft:`3px solid ${gold}`, padding:'18px 22px', marginBottom:12 }
-          },
-            React.createElement('div', { style:{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:20, marginBottom: a.desc ? 10 : 0 } },
-              React.createElement('div', {
-                style:{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontWeight:500, fontSize:20, color:slate, lineHeight:1.2 }
-              }, a.title || 'Add-On'),
-              a.amount && React.createElement('div', {
-                style:{ fontFamily:"'Cormorant Garamond', Georgia, serif", fontWeight:500, fontSize:22, color:magnolia, whiteSpace:'nowrap' }
-              }, money(a.amount))
-            ),
-            a.desc && React.createElement('p', {
-              style:{ fontFamily:"'Figtree', sans-serif", fontWeight:300, fontSize:11, lineHeight:1.65, color:slate, whiteSpace:'pre-wrap' }
-            }, a.desc)
-          )
-        ),
+      realAddOns.length > 0 && React.createElement('div', { style:{ marginTop: 12 } },
+        realAddOns.map((a, i) => React.createElement(PricedBox, { key:a.id || i, item:a, accent:gold, fallback:'Add-On' })),
         React.createElement(Rule)
       ),
 

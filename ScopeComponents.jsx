@@ -7,6 +7,7 @@
  *   - ExclusionsPanel  — the standard exclusions section at the bottom
  *   - ProjectInfo      — the left sidebar form for project details
  *   - AllowancesPanel  — editable allowance line items
+ *   - RequiredItemsPanel — required items priced outside the estimate
  *   - AddOnsPanel      — optional add-on items shown below the estimate
  *
  * Also defines the color palette (C) and button style helper (btnSmall)
@@ -741,48 +742,72 @@ function ProjectInfo({ info, onChange, onChangeType }) {
 }
 
 
-// ── AddOnsPanel ───────────────────────────────────────────────────────────────
-// Optional add-on items that appear beneath the preliminary price in the printed
-// document. Each add-on has a title, dollar amount, and description. Examples:
-// "Pool & Spa — $120,000" or "Finished Basement — $85,000".
-function AddOnsPanel({ addOns, onChange }) {
+// ── PricedItemsPanel ──────────────────────────────────────────────────────────
+// A list of title / dollar amount / description items. Backs two panels:
+//   AddOnsPanel        — optional extras, e.g. "Pool & Spa — $120,000"
+//   RequiredItemsPanel — needed but priced outside the total, e.g. "Utility
+//                        hookup to main house — $18,000", worked out in design
+// Both print beneath the preliminary price.
+function PricedItemsPanel({ items, onChange, heading, caption, titlePlaceholder, descPlaceholder, addLabel, accent }) {
   return React.createElement('div', { style: { padding: 16, borderTop: `1px solid ${C.border}` } },
-    React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: C.goldDark, marginBottom: 4, fontWeight: 500 } }, 'Optional Add-Ons'),
-    React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 10, color: C.goldDark, marginBottom: 14, fontStyle: 'italic' } }, 'Shown beneath the preliminary price'),
-    addOns.map((a, i) =>
-      React.createElement('div', { key: i, style: { background: C.bgLight, padding: 12, marginBottom: 10, borderLeft: `3px solid ${C.gold}` } },
-        // Title and price on one row, with an X to remove the add-on
+    React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: C.goldDark, marginBottom: 4, fontWeight: 500 } }, heading),
+    React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 10, color: C.goldDark, marginBottom: 14, fontStyle: 'italic' } }, caption),
+    items.map((a, i) =>
+      React.createElement('div', { key: i, style: { background: C.bgLight, padding: 12, marginBottom: 10, borderLeft: `3px solid ${accent}` } },
+        // Title and price on one row, with an X to remove the item
         React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 8 } },
           React.createElement('input', {
-            value: a.title || '', placeholder: 'Add-on title (e.g. Pool & Spa)',
-            onChange: e => { const n = [...addOns]; n[i] = { ...n[i], title: e.target.value }; onChange(n); },
+            value: a.title || '', placeholder: titlePlaceholder,
+            onChange: e => { const n = [...items]; n[i] = { ...n[i], title: e.target.value }; onChange(n); },
             style: { flex: 2, fontFamily: "'Figtree', sans-serif", fontSize: 11, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '4px 0', background: 'transparent', outline: 'none', color: C.slate, fontWeight: 500 },
           }),
           React.createElement('input', {
             value: a.amount || '', placeholder: '$ 0',
-            onChange: e => { const n = [...addOns]; n[i] = { ...n[i], amount: e.target.value }; onChange(n); },
-            onBlur: e => { const v = window.cpMoneyInput(e.target.value); if (v === (a.amount || '')) return; const n = [...addOns]; n[i] = { ...n[i], amount: v }; onChange(n); },
+            onChange: e => { const n = [...items]; n[i] = { ...n[i], amount: e.target.value }; onChange(n); },
+            onBlur: e => { const v = window.cpMoneyInput(e.target.value); if (v === (a.amount || '')) return; const n = [...items]; n[i] = { ...n[i], amount: v }; onChange(n); },
             style: { flex: 1, fontFamily: "'Figtree', sans-serif", fontSize: 11, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '4px 0', background: 'transparent', outline: 'none', color: C.magnolia, fontWeight: 500, textAlign: 'right' },
           }),
           React.createElement('button', {
-            onClick: () => onChange(addOns.filter((_, j) => j !== i)),
+            onClick: () => onChange(items.filter((_, j) => j !== i)),
             style: { background: 'none', border: 'none', cursor: 'pointer', color: C.goldDark, fontSize: 13, padding: '0 2px' },
           }, '✕')
         ),
         // Description text area
         React.createElement('textarea', {
-          value: a.desc || '', placeholder: "Description of this add-on, what's included, and any caveats…",
+          value: a.desc || '', placeholder: descPlaceholder,
           rows: 3,
-          onChange: e => { const n = [...addOns]; n[i] = { ...n[i], desc: e.target.value }; onChange(n); },
+          onChange: e => { const n = [...items]; n[i] = { ...n[i], desc: e.target.value }; onChange(n); },
           style: { width: '100%', fontFamily: "'Figtree', sans-serif", fontSize: 11, lineHeight: 1.5, color: C.slate, border: `1px solid ${C.border}`, padding: '6px 8px', background: 'white', outline: 'none', resize: 'vertical' },
         })
       )
     ),
     React.createElement('button', {
-      onClick: () => onChange([...addOns, { id: Date.now(), title: '', amount: '', desc: '' }]),
+      onClick: () => onChange([...items, { id: Date.now(), title: '', amount: '', desc: '' }]),
       style: { ...btnSmall(C.bgLight, C.slate), marginTop: 4, width: '100%', textAlign: 'center' },
-    }, '+ Add Optional Add-On')
+    }, addLabel)
   );
+}
+
+function RequiredItemsPanel({ requiredItems, onChange }) {
+  return React.createElement(PricedItemsPanel, {
+    items: requiredItems, onChange, accent: C.magnolia,
+    heading: 'Required — Not Included',
+    caption: 'Shown after the preliminary price, priced separately from the total',
+    titlePlaceholder: 'Item title (e.g. Utility hookup to main house)',
+    descPlaceholder: 'What this covers and how it will be worked out in design…',
+    addLabel: '+ Add Required Item',
+  });
+}
+
+function AddOnsPanel({ addOns, onChange }) {
+  return React.createElement(PricedItemsPanel, {
+    items: addOns, onChange, accent: C.gold,
+    heading: 'Optional Add-Ons',
+    caption: 'Shown beneath the preliminary price',
+    titlePlaceholder: 'Add-on title (e.g. Pool & Spa)',
+    descPlaceholder: "Description of this add-on, what's included, and any caveats…",
+    addLabel: '+ Add Optional Add-On',
+  });
 }
 
 
@@ -977,4 +1002,4 @@ function DesignDrawingsPanel({ drawings = [], onChange }) {
 // ── Exports ───────────────────────────────────────────────────────────────────
 // Make everything available to index.html and app.jsx via the window object.
 // This is the browser-compatible equivalent of ES module exports.
-Object.assign(window, { SectionAccordion, ExclusionsPanel, ProjectInfo, AllowancesPanel, AddOnsPanel, DesignDrawingsPanel, C, btnSmall });
+Object.assign(window, { SectionAccordion, ExclusionsPanel, ProjectInfo, AllowancesPanel, RequiredItemsPanel, AddOnsPanel, DesignDrawingsPanel, C, btnSmall });
