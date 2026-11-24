@@ -275,6 +275,17 @@ const CP_RANGE_DISCLAIMER =
   'This is a preliminary budgetary range at plus or minus 10 percent, subject to design, engineering and final selections.';
 
 
+// How long the printed price holds. A Design Deposit received inside the
+// window locks the price in. A project saved before this existed has no
+// priceValidDays, so it falls back to the default.
+const CP_DEFAULT_PRICE_VALID_DAYS = 30;
+
+function cpPriceValidNote(info) {
+  const days = cpWeeks(info && info.priceValidDays, CP_DEFAULT_PRICE_VALID_DAYS);
+  return `This price is valid for ${days} days. Submitting the Design Deposit within ${days} days locks it in.`;
+}
+
+
 // ── Export ────────────────────────────────────────────────────────────────────
 // Plain script, no modules — everything hangs off window, matching the rest of
 // the app.
@@ -285,4 +296,5 @@ Object.assign(window, {
   cpComputeSchedule, cpFormatDate, cpJoinNames, cpWeeks,
   cpParseMoney, cpFormatMoney, cpMoneyInput, cpSameMoney, cpPriceRange,
   CP_DEFAULT_DESIGN_WEEKS, CP_DEFAULT_CONSTRUCTION_WEEKS, CP_RANGE_PCT, CP_RANGE_DISCLAIMER,
+  CP_DEFAULT_PRICE_VALID_DAYS, cpPriceValidNote,
 });

@@ -204,6 +204,9 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
             ),
             range && React.createElement('div', { style:{ fontFamily:"'Figtree', sans-serif", fontSize:10, color:'rgba(239,236,232,0.4)', marginTop:4 } },
               window.CP_RANGE_DISCLAIMER
+            ),
+            React.createElement('div', { style:{ fontFamily:"'Figtree', sans-serif", fontSize:11, fontWeight:500, color:gold, marginTop:12 } },
+              window.cpPriceValidNote(info)
             )
           )
         )

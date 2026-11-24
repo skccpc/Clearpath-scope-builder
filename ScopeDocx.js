@@ -299,6 +299,13 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
           font: FONT_BODY, size: 20, color: '888888', italics: true,
         })],
       })] : []),
+      new Paragraph({
+        spacing: { before: 160 },
+        children: [new TextRun({
+          text: window.cpPriceValidNote(info),
+          font: FONT_BODY, size: 22, color: C_MAGNOLIA, bold: true,
+        })],
+      }),
     ], C_SLATE, C_BG_LIGHT));
   }
 

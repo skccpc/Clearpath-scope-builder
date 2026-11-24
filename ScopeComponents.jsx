@@ -640,7 +640,7 @@ function ProjectInfo({ info, onChange, onChangeType }) {
 
   // Whole-week duration input. Blank falls back to the default at render time
   // (see cpWeeks), so clearing the box doesn't produce a broken schedule.
-  const weeksField = (label, key, fallback) =>
+  const weeksField = (label, key, fallback, unit = 'weeks') =>
     React.createElement('div', { style: { marginBottom: 14 } },
       React.createElement('label', {
         style: { display: 'block', fontFamily: "'Figtree', sans-serif", fontSize: 9, letterSpacing: '0.15em', textTransform: 'uppercase', color: C.goldDark, marginBottom: 4, fontWeight: 500 },
@@ -652,7 +652,7 @@ function ProjectInfo({ info, onChange, onChangeType }) {
           onChange: e => onChange({ ...info, [key]: e.target.value }),
           style: { width: 72, fontFamily: "'Figtree', sans-serif", fontSize: 14, color: C.slate, border: 'none', borderBottom: `1px solid ${C.border}`, padding: '8px 0', background: 'transparent', outline: 'none' },
         }),
-        React.createElement('span', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 11, color: C.goldDark } }, 'weeks')
+        React.createElement('span', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 11, color: C.goldDark } }, unit)
       )
     );
 
@@ -703,6 +703,8 @@ function ProjectInfo({ info, onChange, onChangeType }) {
       note(range
         ? `Prints as the total, with a note beneath it: budgetary range ${range.rangeLabel}.`
         : 'Prints as the total, with a ±10% budgetary range noted beneath it.'),
+      weeksField('Price Valid For', 'priceValidDays', CP_DEFAULT_PRICE_VALID_DAYS, 'days'),
+      note('A Design Deposit received within this window locks in the price.'),
 
       sectionHeader('Design Deposit'),
       React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 10, color: C.goldDark, marginTop: -6, marginBottom: 12, fontStyle: 'italic' } },
