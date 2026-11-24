@@ -302,7 +302,7 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
       new Paragraph({
         spacing: { before: 160 },
         children: [new TextRun({
-          text: window.cpPriceValidNote(info),
+          text: window.cpScopeValidNote(info),
           font: FONT_BODY, size: 22, color: C_MAGNOLIA, bold: true,
         })],
       }),
@@ -430,6 +430,11 @@ async function generateScopeDocx({ info, sections, exclusions, allowances, addOn
     // Two separate one-row tables, so a spacer paragraph is needed between them
     // — consecutive tables with no paragraph between them collide visually (and
     // Word will merge them outright).
+    sectionsContent.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
+    sectionsContent.push(cardRow(
+      ['Pre-Construction Start', window.cpFormatDate(sched.preconStart)],
+      ['Pre-Construction Complete', window.cpFormatDate(sched.preconComplete)],
+    ));
     sectionsContent.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
     sectionsContent.push(cardRow(
       ['Construction Start', window.cpFormatDate(sched.constructionStart)],

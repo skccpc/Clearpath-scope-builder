@@ -206,7 +206,7 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
               window.CP_RANGE_DISCLAIMER
             ),
             React.createElement('div', { style:{ fontFamily:"'Figtree', sans-serif", fontSize:11, fontWeight:500, color:gold, marginTop:12 } },
-              window.cpPriceValidNote(info)
+              window.cpScopeValidNote(info)
             )
           )
         )
@@ -230,8 +230,8 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
         React.createElement(Rule)
       ),
 
-      // Schedule — four dates derived from the design start plus the two phase
-      // durations. The section is unconditional: cpComputeSchedule always
+      // Schedule — six dates derived from the design start, the two phase
+      // durations and the fixed pre-construction phase between them. The section is unconditional: cpComputeSchedule always
       // returns a full schedule, defaults and a derived start included.
       React.createElement('div', {},
         React.createElement(SecTitle, { text:'Potential Schedule' }),
@@ -241,6 +241,8 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
           [
             ['Design Start',          window.cpFormatDate(sched.designStart)],
             ['Design Complete',       window.cpFormatDate(sched.designComplete)],
+            ['Pre-Construction Start',    window.cpFormatDate(sched.preconStart)],
+            ['Pre-Construction Complete', window.cpFormatDate(sched.preconComplete)],
             ['Construction Start',    window.cpFormatDate(sched.constructionStart)],
             ['Construction Complete', window.cpFormatDate(sched.constructionComplete)]
           ].map(([label, value], i) =>

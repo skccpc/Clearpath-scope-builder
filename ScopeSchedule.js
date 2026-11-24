@@ -9,11 +9,14 @@
  * Two things live here:
  *
  *   1. SCHEDULE — the project schedule is not typed in by hand. It is derived
- *      from today's date plus two durations in weeks (design, construction):
+ *      from today's date plus two durations in weeks (design, construction)
+ *      and a fixed four-week pre-construction phase between them:
  *
  *        design start         = today
  *        design complete      = design start + design duration
- *        construction start   = design complete
+ *        pre-con start        = design complete
+ *        pre-con complete     = pre-con start + 4 weeks (every project)
+ *        construction start   = pre-con complete
  *        construction complete= construction start + construction duration
  *
  *      Holiday rule: if Thanksgiving week or Christmas week lands inside a
@@ -132,6 +135,8 @@ function cpExtendForHolidays(start, weeks) {
 
 const CP_DEFAULT_DESIGN_WEEKS = 12;
 const CP_DEFAULT_CONSTRUCTION_WEEKS = 12;
+// Fixed, not editable: every project gets it between design and construction.
+const CP_PRECONSTRUCTION_WEEKS = 4;
 
 // Read a duration out of project info, falling back to the default when the
 // field is blank, non-numeric, or nonsensical. Whole weeks only.
@@ -158,7 +163,10 @@ function cpComputeSchedule(info, from) {
   const designStart = pinned ? cpStartOfDay(pinned) : cpNextMonday(from);
   const design      = cpExtendForHolidays(designStart, designWeeks);
 
-  const constructionStart = design.end;   // construction starts when design completes
+  const preconStart       = design.end;   // pre-construction starts when design completes
+  const precon            = cpExtendForHolidays(preconStart, CP_PRECONSTRUCTION_WEEKS);
+
+  const constructionStart = precon.end;   // construction starts when pre-construction completes
   const construction      = cpExtendForHolidays(constructionStart, constructionWeeks);
 
   const weeksBetween = (a, b) => Math.round((b - a) / (7 * 24 * 60 * 60 * 1000));
@@ -167,6 +175,8 @@ function cpComputeSchedule(info, from) {
     designStart,
     designStartPinned:    !!pinned,   // false ⇒ the dates drift with today
     designComplete:       design.end,
+    preconStart,
+    preconComplete:       precon.end,
     constructionStart,
     constructionComplete: construction.end,
 
@@ -177,6 +187,7 @@ function cpComputeSchedule(info, from) {
     totalWeeksEffective:        weeksBetween(designStart, construction.end),
 
     designHolidays:       design.holidays.map(h => h.name),
+    preconHolidays:       precon.holidays.map(h => h.name),
     constructionHolidays: construction.holidays.map(h => h.name),
   };
 }
@@ -275,14 +286,13 @@ const CP_RANGE_DISCLAIMER =
   'This is a preliminary budgetary range at plus or minus 10 percent, subject to design, engineering and final selections.';
 
 
-// How long the printed price holds. A Design Deposit received inside the
-// window locks the price in. A project saved before this existed has no
-// priceValidDays, so it falls back to the default.
-const CP_DEFAULT_PRICE_VALID_DAYS = 30;
+// How long the scope of work holds. A project saved before this existed has
+// no scopeValidDays, so it falls back to the default.
+const CP_DEFAULT_SCOPE_VALID_DAYS = 30;
 
-function cpPriceValidNote(info) {
-  const days = cpWeeks(info && info.priceValidDays, CP_DEFAULT_PRICE_VALID_DAYS);
-  return `This price is valid for ${days} days. Submitting the Design Deposit within ${days} days locks it in.`;
+function cpScopeValidNote(info) {
+  const days = cpWeeks(info && info.scopeValidDays, CP_DEFAULT_SCOPE_VALID_DAYS);
+  return `Scope of work is valid for ${days} days.`;
 }
 
 
@@ -296,5 +306,5 @@ Object.assign(window, {
   cpComputeSchedule, cpFormatDate, cpJoinNames, cpWeeks,
   cpParseMoney, cpFormatMoney, cpMoneyInput, cpSameMoney, cpPriceRange,
   CP_DEFAULT_DESIGN_WEEKS, CP_DEFAULT_CONSTRUCTION_WEEKS, CP_RANGE_PCT, CP_RANGE_DISCLAIMER,
-  CP_DEFAULT_PRICE_VALID_DAYS, cpPriceValidNote,
+  CP_DEFAULT_SCOPE_VALID_DAYS, cpScopeValidNote, CP_PRECONSTRUCTION_WEEKS,
 });

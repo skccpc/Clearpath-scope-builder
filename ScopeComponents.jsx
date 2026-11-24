@@ -666,7 +666,7 @@ function ProjectInfo({ info, onChange, onChangeType }) {
   // shown as a ±10% range and the schedule is counted forward from today.
   const range = window.cpPriceRange(info.estimate);
   const sched = window.cpComputeSchedule(info);
-  const holidays = [...new Set([...(sched.designHolidays || []), ...(sched.constructionHolidays || [])])];
+  const holidays = [...new Set([...(sched.designHolidays || []), ...(sched.preconHolidays || []), ...(sched.constructionHolidays || [])])];
 
   return React.createElement('div', { style: { padding: 16 } },
     field('Project Name',    'projectName', 'e.g. Walter Addition'),
@@ -703,8 +703,7 @@ function ProjectInfo({ info, onChange, onChangeType }) {
       note(range
         ? `Prints as the total, with a note beneath it: budgetary range ${range.rangeLabel}.`
         : 'Prints as the total, with a ±10% budgetary range noted beneath it.'),
-      weeksField('Price Valid For', 'priceValidDays', CP_DEFAULT_PRICE_VALID_DAYS, 'days'),
-      note('A Design Deposit received within this window locks in the price.'),
+      weeksField('Scope Valid For', 'scopeValidDays', CP_DEFAULT_SCOPE_VALID_DAYS, 'days'),
 
       sectionHeader('Design Deposit'),
       React.createElement('div', { style: { fontFamily: "'Figtree', sans-serif", fontSize: 10, color: C.goldDark, marginTop: -6, marginBottom: 12, fontStyle: 'italic' } },
@@ -715,6 +714,7 @@ function ProjectInfo({ info, onChange, onChangeType }) {
       sectionHeader('Potential Schedule'),
       designStartField(),
       weeksField('Design Duration',       'designWeeks',       CP_DEFAULT_DESIGN_WEEKS),
+      note(`Pre-Construction is a fixed ${CP_PRECONSTRUCTION_WEEKS} weeks between design and construction.`),
       weeksField('Construction Duration', 'constructionWeeks', CP_DEFAULT_CONSTRUCTION_WEEKS),
       // Read-only preview of the dates the document will print. Recomputed on
       // every render, so it always matches what an export made right now says.
@@ -722,6 +722,8 @@ function ProjectInfo({ info, onChange, onChangeType }) {
         ...[
           ['Design Start',          window.cpFormatDate(sched.designStart)],
           ['Design Complete',       window.cpFormatDate(sched.designComplete)],
+          ['Pre-Con Start',         window.cpFormatDate(sched.preconStart)],
+          ['Pre-Con Complete',      window.cpFormatDate(sched.preconComplete)],
           ['Construction Start',    window.cpFormatDate(sched.constructionStart)],
           ['Construction Complete', window.cpFormatDate(sched.constructionComplete)],
         ].map(([label, value]) =>
