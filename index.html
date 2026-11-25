@@ -458,6 +458,48 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     }
   }, [tab, info, sections, exclusions, allowances]);
 
+  // ── Review highlights ──
+  // Lines Claude has edited carry item.review ('new' | 'changed' | 'deleted')
+  // and, for 'changed', item.reviewFrom (the old text). The preview highlights
+  // them; Accept / Undo clear the mark and settle the line:
+  //
+  //             Accept                   Undo
+  //   new       keep it                  take it out
+  //   changed   keep the new text        restore reviewFrom
+  //   deleted   take it out              keep it
+  //
+  // "Take it out" deletes a line added to this project (custom, or a numeric
+  // Date.now() id) and just unchecks a library line, so the library option
+  // stays available in Build.
+  function settleLine(it, action, text) {
+    if (action === 'edit') return { ...it, text };
+    const { review, reviewFrom, ...clean } = it;
+    const takeOut = it.custom || typeof it.id === 'number' ? null : { ...clean, included: false };
+    if (action === 'accept') return review === 'deleted' ? takeOut : clean;
+    if (review === 'new') return takeOut;
+    if (review === 'changed') return { ...clean, text: reviewFrom != null ? reviewFrom : it.text };
+    return clean;
+  }
+
+  // One line, from a button or an in-place edit in the preview.
+  function reviewLine(kind, sectionId, idx, action, text) {
+    const apply = items => items.map((it, j) => j === idx ? settleLine(it, action, text) : it).filter(Boolean);
+    if (kind === 'exclusion') setExclusions(apply);
+    else setSections(ss => ss.map(s => s.id === sectionId ? { ...s, items: apply(s.items) } : s));
+  }
+
+  // Every marked line at once.
+  function reviewAll(action) {
+    const apply = items => items.map(it => it.review ? settleLine(it, action) : it).filter(Boolean);
+    setExclusions(apply);
+    setSections(ss => ss.map(s => ({ ...s, items: apply(s.items) })));
+  }
+
+  // Marked lines that actually show in the document.
+  const pendingReview =
+    sections.reduce((n, s) => n + s.items.filter(i => i.included && i.review).length, 0) +
+    exclusions.filter(e => e.included && e.review).length;
+
   function updateSectionItems(id, items) {
     setSections(sects => sects.map(s => s.id === id ? { ...s, items } : s));
   }
@@ -837,7 +879,25 @@ ${fontStyles}
   const previewView = React.createElement('div', {
     style:{ flex:1, overflow:'auto', background:'#ccc9c4', padding:'32px' }
   },
+    // Review bar — only while there are highlighted lines.
+    pendingReview > 0 && React.createElement('div', {
+      style:{ maxWidth:816, margin:'0 auto 12px', display:'flex', alignItems:'center', gap:12, background:'white', padding:'10px 16px', borderLeft:'3px solid #D4A814', fontFamily:"'Figtree',sans-serif", fontSize:12, color:C.slate }
+    },
+      React.createElement('div', { style:{ flex:1 } },
+        React.createElement('strong', { style:{ fontWeight:600 } }, `${pendingReview} ${pendingReview === 1 ? 'change' : 'changes'} to review. `),
+        React.createElement('span', { style:{ color:C.goldDark } }, 'Highlights show here only, never in a download. Click highlighted text to edit it.')
+      ),
+      React.createElement('button', { onClick: () => reviewAll('accept'), style: btnSmall(C.slate, 'white') }, 'Accept all'),
+      React.createElement('button', { onClick: () => { if (confirm('Undo every highlighted change?')) reviewAll('undo'); }, style: btnSmall(C.bgLight, C.slate) }, 'Undo all')
+    ),
     React.createElement('div', { style:{ maxWidth:816, margin:'0 auto', background:'white', boxShadow:'0 4px 32px rgba(0,0,0,0.18)' } },
+      React.createElement(ScopeDocument, { info, sections, exclusions, allowances, addOns, requiredItems, designDrawings,
+        review: pendingReview > 0 ? { onLine: reviewLine } : null })
+    ),
+    // The clean copy the PDF export and Ctrl+P print from (#scope-document).
+    // Only needed while the visible one carries highlights; kept off-screen
+    // rather than display:none because the PDF export measures its height.
+    pendingReview > 0 && React.createElement('div', { 'aria-hidden':true, style:{ position:'absolute', left:-20000, top:0, width:816, pointerEvents:'none' } },
       React.createElement(ScopeDocument, { info, sections, exclusions, allowances, addOns, requiredItems, designDrawings })
     )
   );

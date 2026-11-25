@@ -1,7 +1,59 @@
 // ─── Document Preview Component ─────────────────────────────────────────────
 // Renders a branded, print-ready scope of work from the builder state
 
-function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], requiredItems = [], designDrawings = [] }) {
+// ─── Review highlights ───────────────────────────────────────────────────────
+// Review marks on a scope or exclusion line:
+//   item.review     'new' | 'changed' | 'deleted'
+//   item.reviewFrom  the text before the change (for 'changed')
+const REVIEW_STYLES = {
+  new:     { bg:'#E4F4E1', edge:'#3E9B4F', tag:'New',    accept:'Keep this line',          undo:'Remove this line' },
+  changed: { bg:'#FCF3C9', edge:'#D4A814', tag:'Changed', accept:'Keep the new wording',    undo:'Go back to the original wording' },
+  deleted: { bg:'#FBE1DF', edge:'#C8473C', tag:'Delete',  accept:'Delete this line',        undo:'Keep this line' },
+};
+
+// A highlighted line. The text is editable in place and saves on blur
+// (Enter also commits). Accept and Undo both clear the highlight; what they
+// do to the line itself depends on the mark — see settleLine in index.html.
+//
+// Defined at module level, not inside ScopeDocument, so its identity is stable
+// across renders — otherwise an autosave re-render would remount the line and
+// drop the cursor out of a line mid-edit.
+function ReviewLine({ item, onAction }) {
+  const slate = '#3F4E5A', goldDark = '#a8a09a';
+  const st = REVIEW_STYLES[item.review];
+  const btn = (label, title, color, action) => React.createElement('button', {
+    title, onClick: () => onAction(action),
+    style:{ fontFamily:"'Figtree', sans-serif", fontSize:9, fontWeight:500, letterSpacing:'0.08em', textTransform:'uppercase', background:'white', color, border:`1px solid ${color}`, padding:'3px 7px', cursor:'pointer', whiteSpace:'nowrap' }
+  }, label);
+  return React.createElement('div', {
+    style:{ display:'flex', alignItems:'flex-start', gap:10, padding:'6px 8px', margin:'3px 0', background:st.bg, borderLeft:`3px solid ${st.edge}`, breakInside:'avoid', fontFamily:"'Figtree', sans-serif", fontWeight:300, fontSize:11, lineHeight:1.6, color:slate }
+  },
+    React.createElement('div', { style:{ flex:1, minWidth:0 } },
+      React.createElement('span', { style:{ fontSize:8, fontWeight:600, letterSpacing:'0.12em', textTransform:'uppercase', color:st.edge, marginRight:6 } }, st.tag),
+      React.createElement('span', {
+        contentEditable: true, suppressContentEditableWarning: true,
+        title: 'Click to edit',
+        onKeyDown: e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } },
+        onBlur: e => { const t = e.currentTarget.innerText.trim(); if (t && t !== item.text) onAction('edit', t); },
+        style:{ outline:'none', borderBottom:'1px dashed rgba(63,78,90,0.35)', textDecoration: item.review === 'deleted' ? 'line-through' : 'none' }
+      }, item.text),
+      item.review === 'changed' && item.reviewFrom && React.createElement('div', {
+        style:{ fontSize:10, fontStyle:'italic', color:goldDark, marginTop:2 }
+      }, 'Was: ', React.createElement('span', { style:{ textDecoration:'line-through' } }, item.reviewFrom))
+    ),
+    React.createElement('div', { style:{ display:'flex', gap:4, flexShrink:0 } },
+      btn('✓ Accept', st.accept, st.edge, 'accept'),
+      btn('↶ Undo',  st.undo,   slate,   'undo')
+    )
+  );
+}
+
+
+// `review` is only passed by the on-screen preview. When it is, lines carrying
+// a review mark (see REVIEW_STYLES) render highlighted with inline editing and
+// Accept / Undo buttons. Every export renders without it, so highlights never
+// reach a PDF, a print or the .docx.
+function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], requiredItems = [], designDrawings = [], review = null }) {
   const slate = '#3F4E5A', offwhite = '#EFECE8', magnolia = '#83443D', gold = '#C3BDB1', goldDark = '#a8a09a', border = '#ece8e3';
 
   const includedSections = sections.filter(s => s.items.some(i => i.included));
@@ -59,6 +111,13 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
     );
   }
 
+  // A scope or exclusion line: highlighted when the preview is in review and
+  // the line is marked, a plain bullet otherwise.
+  const line = (item, key, onAction) =>
+    review && REVIEW_STYLES[item.review]
+      ? React.createElement(ReviewLine, { key, item, onAction })
+      : React.createElement(Bullet, { key, text:item.text });
+
   function Rule() {
     return React.createElement('div', { style:{ height:1, background:border, margin:'24px 0' } });
   }
@@ -101,7 +160,7 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
   const realRequired = requiredItems.filter(a => a.title || a.amount || a.desc);
   const realAddOns = addOns.filter(a => a.title || a.amount || a.desc);
 
-  return React.createElement('div', { id:'scope-document', style:docStyle },
+  return React.createElement('div', { id: review ? 'scope-document-review' : 'scope-document', style:docStyle },
 
     // Header — logo only, centered in blue band
     React.createElement('div', { style:{ background:slate, padding:'40px 64px', display:'flex', alignItems:'center', justifyContent:'center' } },
@@ -148,7 +207,7 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
           return React.createElement('div', { key:section.id, style:{ marginBottom:4 } },
             React.createElement(SubTitle, { text:section.title }),
             activeItems.map((item, i) =>
-              React.createElement(Bullet, { key:i, text:item.text })
+              line(item, i, (action, text) => review.onLine('section', section.id, section.items.indexOf(item), action, text))
             )
           );
         })
@@ -178,7 +237,9 @@ function ScopeDocument({ info, sections, exclusions, allowances, addOns = [], re
           'The following items are excluded from this scope of work unless specifically noted. Any excluded item encountered will be addressed via written change order prior to proceeding.'
         ),
         React.createElement('div', { style:{ columns:2, columnGap:32 } },
-          includedExclusions.map((e, i) => React.createElement(Bullet, { key:i, text:e.text }))
+          includedExclusions.map((e, i) =>
+            line(e, i, (action, text) => review.onLine('exclusion', null, exclusions.indexOf(e), action, text))
+          )
         )
       ),
 

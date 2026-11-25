@@ -3,7 +3,7 @@
 Web-based tool for assembling Scope of Work documents for ClearPath Construction projects.
 Outputs print-ready PDF and editable .docx.
 
-**Live site:** https://skcagents.github.io/Clearpath-scope-builder/
+**Live site:** https://skccpc.github.io/Clearpath-scope-builder/
 
 ---
 
@@ -18,6 +18,22 @@ Outputs print-ready PDF and editable .docx.
 | `ScopeDocx.js` | Generates the editable Microsoft Word (.docx) export |
 | `*.compiled.js` | Pre-transpiled versions of the .jsx files (not currently used; HTML loads .jsx through Babel at runtime) |
 | `assets/` | ClearPath logo files |
+
+## Review highlights (for edits made by Claude)
+
+When Claude edits a project's scope lines or exclusions, it marks each line it
+touched so the change can be reviewed in **Preview**:
+
+| Field on the line | Meaning | Preview |
+|---|---|---|
+| `review: 'new'` | line was added (set `included: true`) | green |
+| `review: 'changed'` + `reviewFrom: '<old text>'` | wording changed; `text` holds the new wording | yellow, with "Was: …" |
+| `review: 'deleted'` | line should be removed (leave it in place, `included: true`) | red, struck through |
+
+Highlighted text can be edited in place. **Accept** / **Undo** on each line (or
+Accept all / Undo all in the bar above the document) clear the mark. Highlights
+appear only in the on-screen preview — PDF export, printing and the .docx are
+always clean, and a line marked for deletion still prints until it's accepted.
 
 ## Running locally
 
