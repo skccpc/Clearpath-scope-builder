@@ -21,14 +21,18 @@ Outputs print-ready PDF and editable .docx.
 
 ## Review highlights (for edits made by Claude)
 
-When Claude edits a project's scope lines or exclusions, it marks each line it
-touched so the change can be reviewed in **Preview**:
+Each project has a **Track changes** switch in the top bar. While it's on, any
+edit to a scope line or exclusion made in Build (by Claude in the browser or by
+hand) is marked for review instead of applied silently. It's on for every new
+project and, of the projects that existed before, only Obarski.
+
+The marks live on the line itself:
 
 | Field on the line | Meaning | Preview |
 |---|---|---|
-| `review: 'new'` | line was added (set `included: true`) | green |
-| `review: 'changed'` + `reviewFrom: '<old text>'` | wording changed; `text` holds the new wording | yellow, with "Was: …" |
-| `review: 'deleted'` | line should be removed (leave it in place, `included: true`) | red, struck through |
+| `review: 'new'` | line was added or checked | green (Excel `#C6EFCE`) |
+| `review: 'changed'` + `reviewFrom: '<old text>'` | wording changed; `text` holds the new wording | yellow (`#FFEB9C`), with "Was: …" |
+| `review: 'deleted'` | line was unchecked or deleted; it stays in place until accepted | red (`#FFC7CE`), struck through |
 
 Highlighted text can be edited in place. **Accept** / **Undo** on each line (or
 Accept all / Undo all in the bar above the document) clear the mark. Highlights

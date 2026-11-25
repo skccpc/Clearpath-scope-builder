@@ -5,11 +5,16 @@
 // Review marks on a scope or exclusion line:
 //   item.review     'new' | 'changed' | 'deleted'
 //   item.reviewFrom  the text before the change (for 'changed')
+//
+// Colors are Excel's conditional-formatting presets (light fill, dark text):
+// "Green Fill with Dark Green Text", "Yellow Fill with Dark Yellow Text" and
+// "Light Red Fill with Dark Red Text".
 const REVIEW_STYLES = {
-  new:     { bg:'#E4F4E1', edge:'#3E9B4F', tag:'New',    accept:'Keep this line',          undo:'Remove this line' },
-  changed: { bg:'#FCF3C9', edge:'#D4A814', tag:'Changed', accept:'Keep the new wording',    undo:'Go back to the original wording' },
-  deleted: { bg:'#FBE1DF', edge:'#C8473C', tag:'Delete',  accept:'Delete this line',        undo:'Keep this line' },
+  new:     { bg:'#C6EFCE', edge:'#006100', tag:'New',     accept:'Keep this line',       undo:'Remove this line' },
+  changed: { bg:'#FFEB9C', edge:'#9C5700', tag:'Changed', accept:'Keep the new wording', undo:'Go back to the original wording' },
+  deleted: { bg:'#FFC7CE', edge:'#9C0006', tag:'Delete',  accept:'Delete this line',     undo:'Keep this line' },
 };
+window.REVIEW_STYLES = REVIEW_STYLES;
 
 // A highlighted line. The text is editable in place and saves on blur
 // (Enter also commits). Accept and Undo both clear the highlight; what they

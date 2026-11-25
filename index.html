@@ -426,7 +426,14 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
   // Merge saved/seeded info over the defaults: a newly created project carries
   // the name/client/address entered in the New Project dialog, and any field it
   // doesn't specify (preparedBy, deposit, …) still picks up its default.
-  const [info, setInfo] = React.useState({ ...DEFAULT_INFO, ...(initialState?.info || {}) });
+  const [info, setInfo] = React.useState(() => {
+    const merged = { ...DEFAULT_INFO, ...(initialState?.info || {}) };
+    // Track changes is on for projects created since it existed (they're
+    // stamped trackChanges: true) and off for older ones — except Obarski,
+    // the one existing project it was switched on for.
+    if (merged.trackChanges === undefined && /obarski/i.test(merged.projectName || '')) merged.trackChanges = true;
+    return merged;
+  });
   const [sections, setSections] = React.useState(() =>
     initialState?.sections
       ? backfillLibraryText(initialState.sections)
@@ -461,7 +468,8 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
   // ── Review highlights ──
   // Lines Claude has edited carry item.review ('new' | 'changed' | 'deleted')
   // and, for 'changed', item.reviewFrom (the old text). The preview highlights
-  // them; Accept / Undo clear the mark and settle the line:
+  // them; Accept / Undo clear the mark and settle the line. Marks are set by
+// trackLines below while Track changes is on.
   //
   //             Accept                   Undo
   //   new       keep it                  take it out
@@ -479,6 +487,42 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     if (review === 'new') return takeOut;
     if (review === 'changed') return { ...clean, text: reviewFrom != null ? reviewFrom : it.text };
     return clean;
+  }
+
+  // ── Track changes ──
+  // With info.trackChanges on, every line edit made in Build is marked for
+  // review instead of applied silently: added or checked → new, reworded →
+  // changed (reviewFrom keeps the original), unchecked or deleted → stays in
+  // place marked deleted. Reverting a line to its original text clears its
+  // mark, and undoing a line that was itself new just drops it. Accept / Undo
+  // in the preview go straight to setSections, so they aren't tracked.
+  function trackLines(prev, next) {
+    const key = (it, i) => it.id != null ? it.id : 'i' + i;
+    const before = new Map(prev.map((o, i) => [key(o, i), o]));
+    const strip = ({ review, reviewFrom, ...rest }) => rest;
+    const out = next.map((n, i) => {
+      const o = before.get(key(n, i));
+      if (!o) return n.included ? { ...n, review: 'new' } : n;
+      if (o.review === 'new') return n.included ? n : strip(n);
+      if (o.included && !n.included) return { ...n, included: true, review: 'deleted' };
+      if (!o.included && n.included) return { ...n, review: 'new' };
+      if (n.text !== o.text && o.review !== 'deleted') {
+        const from = o.review === 'changed' ? o.reviewFrom : o.text;
+        return n.text === from ? strip(n) : { ...n, review: 'changed', reviewFrom: from };
+      }
+      return n;
+    });
+    // Deleted lines come back, marked, at their old position.
+    const kept = new Set(next.map(key));
+    prev.forEach((o, i) => {
+      if (!kept.has(key(o, i)) && o.included && o.review !== 'new') out.splice(Math.min(i, out.length), 0, { ...o, review: 'deleted' });
+    });
+    return out;
+  }
+  const tracked = (prev, next) => info.trackChanges ? trackLines(prev, next) : next;
+
+  function updateExclusions(next) {
+    setExclusions(prev => tracked(prev, next));
   }
 
   // One line, from a button or an in-place edit in the preview.
@@ -501,7 +545,7 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     exclusions.filter(e => e.included && e.review).length;
 
   function updateSectionItems(id, items) {
-    setSections(sects => sects.map(s => s.id === id ? { ...s, items } : s));
+    setSections(sects => sects.map(s => s.id === id ? { ...s, items: tracked(s.items, items) } : s));
   }
 
   // Changing the project type after creation reloads the scope template, which
@@ -522,7 +566,7 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     setSections(sects => sects.map(s => {
       if (s.id !== id) return s;
       const allIncluded = s.items.every(i => i.included);
-      return { ...s, items: s.items.map(i => ({ ...i, included: !allIncluded })) };
+      return { ...s, items: tracked(s.items, s.items.map(i => ({ ...i, included: !allIncluded }))) };
     }));
   }
 
@@ -619,6 +663,16 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     saveStatus && React.createElement('div', {
       style: { fontFamily:"'Figtree',sans-serif", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color: saveColor }
     }, saveLabel),
+    // Track changes switch (projects only — see trackLines)
+    !templateMode && React.createElement('button', {
+      key: 'track',
+      onClick: () => setInfo(i => ({ ...i, trackChanges: !i.trackChanges })),
+      title: info.trackChanges
+        ? 'Edits to scope lines and exclusions are highlighted in Preview for review. Click to turn off.'
+        : 'Click to highlight edits to scope lines and exclusions in Preview for review.',
+      style:{ fontFamily:"'Figtree',sans-serif", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', fontWeight:500, background:'none', cursor:'pointer',
+        border:`1px solid ${info.trackChanges ? '#FFEB9C' : 'rgba(239,236,232,0.3)'}`, color: info.trackChanges ? '#FFEB9C' : 'rgba(239,236,232,0.5)', padding:'4px 10px' }
+    }, info.trackChanges ? '● Track changes on' : '○ Track changes off'),
     React.createElement('div', { style:{ flex:1 } }),
     // Tabs
     ...['build', 'preview'].map(t =>
@@ -853,7 +907,7 @@ ${fontStyles}
         ),
         // Exclusions at bottom
         React.createElement('div', { style:{marginTop:2} },
-          React.createElement(ExclusionsPanel, { exclusions, onUpdate:setExclusions })
+          React.createElement(ExclusionsPanel, { exclusions, onUpdate:updateExclusions })
         ),
         // Add new section
         React.createElement('div', { style:{ padding:'12px 16px', borderTop:`1px solid ${C.border}`, marginTop:4 } },
@@ -881,7 +935,7 @@ ${fontStyles}
   },
     // Review bar — only while there are highlighted lines.
     pendingReview > 0 && React.createElement('div', {
-      style:{ maxWidth:816, margin:'0 auto 12px', display:'flex', alignItems:'center', gap:12, background:'white', padding:'10px 16px', borderLeft:'3px solid #D4A814', fontFamily:"'Figtree',sans-serif", fontSize:12, color:C.slate }
+      style:{ maxWidth:816, margin:'0 auto 12px', display:'flex', alignItems:'center', gap:12, background:'white', padding:'10px 16px', borderLeft:'3px solid #9C5700', fontFamily:"'Figtree',sans-serif", fontSize:12, color:C.slate }
     },
       React.createElement('div', { style:{ flex:1 } },
         React.createElement('strong', { style:{ fontWeight:600 } }, `${pendingReview} ${pendingReview === 1 ? 'change' : 'changes'} to review. `),

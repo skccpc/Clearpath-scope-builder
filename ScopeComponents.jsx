@@ -96,7 +96,7 @@ function btnSmall(bg, color) {
 //                     parent doesn't support reordering (the ↑/↓ arrows are
 //                     hidden entirely if no handler is provided).
 //   isFirst/isLast  — disables the up/down arrows at the list boundaries.
-function LineItem({ text, libraryText, included, onToggle, onEdit, onDelete, isCustom, onAddToLibrary, onSaveToLibrary, onMoveUp, onMoveDown, isFirst, isLast }) {
+function LineItem({ text, libraryText, included, review, onToggle, onEdit, onDelete, isCustom, onAddToLibrary, onSaveToLibrary, onMoveUp, onMoveDown, isFirst, isLast }) {
   const [editing, setEditing] = React.useState(false);  // Whether the edit textarea is showing
   const [val, setVal]         = React.useState(text);    // Live value while the user is typing
   const inputRef = React.useRef();
@@ -124,6 +124,11 @@ function LineItem({ text, libraryText, included, onToggle, onEdit, onDelete, isC
     borderBottom: `1px solid ${C.border}`,
     opacity: included ? 1 : 0.4,          // Unchecked lines fade out to de-emphasize them
     transition: 'opacity 0.15s',
+    // Tracked change awaiting review in Preview — same fills as the preview
+    // highlights (REVIEW_STYLES in ScopeDocument.jsx).
+    ...(window.REVIEW_STYLES && window.REVIEW_STYLES[review]
+      ? { background: window.REVIEW_STYLES[review].bg, paddingLeft: 6, paddingRight: 4, textDecoration: review === 'deleted' ? 'line-through' : 'none' }
+      : {}),
   };
 
   return React.createElement('div', { style: liStyles },
@@ -359,6 +364,7 @@ function SectionAccordion({ section, onUpdateItems, onToggleAll, onMoveUp, onMov
           text:       item.text,
           libraryText: item.libraryText,
           included:   item.included,
+          review:     item.review,
           isCustom:   item.custom,
           onToggle: () => updateItem(idx, { included: !item.included }),
           onEdit:   text => updateItem(idx, { text }),
@@ -485,7 +491,7 @@ function ExclusionsPanel({ exclusions, onUpdate }) {
     },
       exclusions.map((item, idx) =>
         React.createElement(LineItem, {
-          key: item.id, text: item.text, included: item.included,
+          key: item.id, text: item.text, included: item.included, review: item.review,
           onToggle: () => toggle(idx),
           onEdit:   t => onUpdate(exclusions.map((e, i) => i === idx ? { ...e, text: t } : e)),
           onDelete: () => del(idx),

@@ -296,6 +296,8 @@ function NewProjectModal({ onClose, onCreate, existingProjects = [] }) {
       // Prepared date defaults to the current month + year (e.g. "June 2026").
       // Editable later in the Project tab; frozen at creation so it doesn't drift.
       date:        new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      // New projects highlight edits for review (see trackLines in index.html).
+      trackChanges: true,
     };
 
     let result;
