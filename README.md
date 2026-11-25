@@ -21,10 +21,10 @@ Outputs print-ready PDF and editable .docx.
 
 ## Review highlights (for edits made by Claude)
 
-Each project has a **Track changes** switch in the top bar. While it's on, any
-edit to a scope line or exclusion made in Build (by Claude in the browser or by
-hand) is marked for review instead of applied silently. It's on for every new
-project and, of the projects that existed before, only Obarski.
+The editor has three tabs: **Build**, **Review** and **Preview**. Build is free
+editing. **Review** is the same editor for Claude to use: any edit to a scope
+line or exclusion made there is marked for review instead of applied silently.
+Review mode isn't saved; every project opens in Build.
 
 The marks live on the line itself:
 

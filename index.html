@@ -426,14 +426,7 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
   // Merge saved/seeded info over the defaults: a newly created project carries
   // the name/client/address entered in the New Project dialog, and any field it
   // doesn't specify (preparedBy, deposit, …) still picks up its default.
-  const [info, setInfo] = React.useState(() => {
-    const merged = { ...DEFAULT_INFO, ...(initialState?.info || {}) };
-    // Track changes is on for projects created since it existed (they're
-    // stamped trackChanges: true) and off for older ones — except Obarski,
-    // the one existing project it was switched on for.
-    if (merged.trackChanges === undefined && /obarski/i.test(merged.projectName || '')) merged.trackChanges = true;
-    return merged;
-  });
+  const [info, setInfo] = React.useState({ ...DEFAULT_INFO, ...(initialState?.info || {}) });
   const [sections, setSections] = React.useState(() =>
     initialState?.sections
       ? backfillLibraryText(initialState.sections)
@@ -469,7 +462,7 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
   // Lines Claude has edited carry item.review ('new' | 'changed' | 'deleted')
   // and, for 'changed', item.reviewFrom (the old text). The preview highlights
   // them; Accept / Undo clear the mark and settle the line. Marks are set by
-// trackLines below while Track changes is on.
+// trackLines below while editing in the Review tab.
   //
   //             Accept                   Undo
   //   new       keep it                  take it out
@@ -489,9 +482,9 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     return clean;
   }
 
-  // ── Track changes ──
-  // With info.trackChanges on, every line edit made in Build is marked for
-  // review instead of applied silently: added or checked → new, reworded →
+  // ── Review mode ──
+  // The Review tab is the Build editor with change tracking: every line edit
+  // made there is marked for review instead of applied silently: added or checked → new, reworded →
   // changed (reviewFrom keeps the original), unchecked or deleted → stays in
   // place marked deleted. Reverting a line to its original text clears its
   // mark, and undoing a line that was itself new just drops it. Accept / Undo
@@ -519,7 +512,9 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     });
     return out;
   }
-  const tracked = (prev, next) => info.trackChanges ? trackLines(prev, next) : next;
+  // Build stays free editing. Review mode is meant for Claude, and it isn't
+  // saved — every project opens in Build.
+  const tracked = (prev, next) => tab === 'review' ? trackLines(prev, next) : next;
 
   function updateExclusions(next) {
     setExclusions(prev => tracked(prev, next));
@@ -663,29 +658,21 @@ function App({ initialState, onChange, libraryData, saveStatus, onBack, template
     saveStatus && React.createElement('div', {
       style: { fontFamily:"'Figtree',sans-serif", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', color: saveColor }
     }, saveLabel),
-    // Track changes switch (projects only — see trackLines)
-    !templateMode && React.createElement('button', {
-      key: 'track',
-      onClick: () => setInfo(i => ({ ...i, trackChanges: !i.trackChanges })),
-      title: info.trackChanges
-        ? 'Edits to scope lines and exclusions are highlighted in Preview for review. Click to turn off.'
-        : 'Click to highlight edits to scope lines and exclusions in Preview for review.',
-      style:{ fontFamily:"'Figtree',sans-serif", fontSize:9, letterSpacing:'0.12em', textTransform:'uppercase', fontWeight:500, background:'none', cursor:'pointer',
-        border:`1px solid ${info.trackChanges ? '#FFEB9C' : 'rgba(239,236,232,0.3)'}`, color: info.trackChanges ? '#FFEB9C' : 'rgba(239,236,232,0.5)', padding:'4px 10px' }
-    }, info.trackChanges ? '● Track changes on' : '○ Track changes off'),
     React.createElement('div', { style:{ flex:1 } }),
     // Tabs
-    ...['build', 'preview'].map(t =>
+    // Review is Build with change tracking — for Claude's edits (see trackLines).
+    // Templates have no Preview review flow, so they keep just Build / Preview.
+    ...(templateMode ? ['build', 'preview'] : ['build', 'review', 'preview']).map(t =>
       React.createElement('button', {
         key:t, onClick:()=>setTab(t),
         style:{
           fontFamily:"'Figtree',sans-serif", fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase',
           fontWeight:500, background:'none', border:'none', cursor:'pointer',
-          color: t===tab ? '#EFECE8' : 'rgba(239,236,232,0.45)',
-          borderBottom: t===tab ? '1px solid #EFECE8' : '1px solid transparent',
+          color: t===tab ? (t==='review' ? '#FFEB9C' : '#EFECE8') : 'rgba(239,236,232,0.45)',
+          borderBottom: t===tab ? `1px solid ${t==='review' ? '#FFEB9C' : '#EFECE8'}` : '1px solid transparent',
           paddingBottom:2,
         }
-      }, t === 'build' ? '← Build' : 'Preview →')
+      }, t === 'build' ? '← Build' : t === 'review' ? 'Review' : 'Preview →')
     ),
     React.createElement('div', { style:{ width:1, height:20, background:'rgba(239,236,232,0.2)' } }),
     // Exports are project-only: a template has no client, price or dates to print.
@@ -958,7 +945,12 @@ ${fontStyles}
 
   return React.createElement('div', { id:'builder-shell', style:{ height:'100vh', display:'flex', flexDirection:'column', overflow:'hidden' } },
     topBar,
-    tab === 'build' ? buildView : previewView
+    // Review mode banner, so it's never mistaken for Build.
+    tab === 'review' && React.createElement('div', {
+      style:{ background:'#FFEB9C', color:'#9C5700', fontFamily:"'Figtree',sans-serif", fontSize:11, padding:'7px 16px', textAlign:'center', flexShrink:0 }
+    }, React.createElement('strong', { style:{ fontWeight:600 } }, 'Review mode. '),
+       'Edits to scope lines and exclusions are highlighted for approval in Preview. Use Build to edit freely.'),
+    tab === 'preview' ? previewView : buildView
   );
 }
 

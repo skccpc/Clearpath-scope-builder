@@ -177,8 +177,6 @@ window.cpCopyProject = async function (sourceId, overrides) {
     // likely in the past. Clearing it puts the copy back on the derived next
     // Monday, which the user can re-pin.
     designStartDate: '',
-    // Like any new project, the copy highlights edits for review.
-    trackChanges: true,
   };
 
   return window.cpCreateProject({
